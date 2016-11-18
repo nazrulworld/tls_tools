@@ -59,9 +59,9 @@ def main():
  
     conn = M2Crypto.SSL.Connection(tls_context)
 
-    try:
-        reports = dict()
-        for host in servers:
+    reports = dict()
+    for host in servers:
+        try:
             # host = address, port
             conn.connect(host)
             chain = conn.get_peer_cert_chain()
@@ -107,26 +107,30 @@ def main():
                 print ("- [Keysize]:\t\t%s Bits"     % (pkey.size() * 8))
                 print ("- [RSA Modulus]:\t(hex) %s"  % pkey.get_modulus())
                 print ("- [RSA Key]:\n%s"            % pkey.get_rsa().as_pem())
+        except Exception as exc:
+            conn.clear()
+            print(WARNING[1] + str(exc))
+            sys.exit(UNKNOWN[0])
+        finally:
+            conn.close()
 
-        if len(reports):
-            if reports.get('error'):
-                printable = CRITICAL[1] + "Certificate Expired!\n"
-                for server, cert in reports.get('error', []):
-                    printable += "Server: %s; Expired On: %s \n" % (server, cert.get_not_after())
-                print (printable)
-                sys.exit(CRITICAL[0])
+    if len(reports):
+        if reports.get('error'):
+            printable = CRITICAL[1] + "Certificate Expired!\n"
+            for server, cert in reports.get('error', []):
+                printable += "Server: %s; Expired On: %s \n" % (server, cert.get_not_after())
+            print (printable)
+            sys.exit(CRITICAL[0])
 
-            if reports.get('warn'):
-                printable = CRITICAL[1] + "Certificate Will Expire Soon!\n"
-                for server, cert in reports.get('warn', []):
-                    printable += "Server: %s; Expired On: %s \n" % (server, cert.get_not_after())
-                print (printable)
-                sys.exit(WARNING[0])
+        if reports.get('warn'):
+            printable = CRITICAL[1] + "Certificate Will Expire Soon!\n"
+            for server, cert in reports.get('warn', []):
+                printable += "Server: %s; Expired On: %s \n" % (server, cert.get_not_after())
+            print (printable)
+            sys.exit(WARNING[0])
 
-        print (OK[1] + "All Certificates are updated.")
-    except Exception as exc:
-        print(WARNING[1] + str(exc))
-        sys.exit(UNKNOWN[0])
+    print (OK[1] + "All Certificates are updated.")
+
 
 if __name__ == '__main__':
     main()
